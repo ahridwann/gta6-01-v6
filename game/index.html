@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vanta City: Night Runner</title>
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --ink: #ffe9c9; --dim: #c9a98a; --panel: rgba(16, 10, 28, 0.82);
+    --line: rgba(255, 233, 201, 0.25); --gold: #ffd166; --pink: #ff5c8a;
+    --cyan: #4dd8c8; --red: #ff2e3e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a0f24;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .hidden { display: none !important; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; font-size: 14px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px 12px; backdrop-filter: blur(2px); }
+  #mission-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    min-width: 460px; text-align: center; border-left: 4px solid var(--gold); }
+  #mb-title { font-size: 19px; font-weight: 800; letter-spacing: 1px; }
+  #mb-row { display: flex; justify-content: space-between; gap: 18px; margin-top: 2px; color: var(--dim); font-weight: 600; }
+  #mb-timer { color: var(--gold); font-size: 17px; }
+  #hud-stars { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); margin-top: 92px;
+    font-size: 26px; letter-spacing: 4px; color: var(--red); text-shadow: 0 0 12px rgba(255,46,62,.7); }
+  #hud-top-right { position: absolute; top: 14px; right: 14px; text-align: right; min-width: 220px; }
+  #hud-cash { font-size: 26px; font-weight: 800; color: var(--gold); }
+  #hud-rank { font-size: 15px; font-weight: 800; letter-spacing: 1px; }
+  #hud-respect { color: var(--dim); font-size: 12px; }
+  .bar { height: 7px; background: rgba(255,255,255,.14); border-radius: 4px; overflow: hidden; margin-top: 4px; }
+  .bar > i { display: block; height: 100%; background: var(--gold); border-radius: 4px; }
+  #hud-district { margin-top: 6px; font-size: 13px; font-weight: 700; color: var(--cyan); }
+  #dispatch { position: absolute; top: 150px; right: 14px; width: 248px; }
+  #dispatch-head { font-size: 12px; font-weight: 800; letter-spacing: 1px; color: #ff8a96; margin-bottom: 6px; }
+  .unit { display: flex; justify-content: space-between; gap: 6px; font-size: 12.5px; padding: 2px 0; border-bottom: 1px dashed rgba(255,233,201,.14); }
+  .u-name { font-weight: 800; } .u-dist { color: var(--gold); } .u-role { color: var(--dim); }
+  .unit.more { color: var(--dim); font-style: italic; border-bottom: none; }
+  #hud-bottom-left { position: absolute; left: 14px; bottom: 14px; width: 300px; }
+  .vital { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-size: 12px; font-weight: 700; }
+  .vital .bar { flex: 1; margin: 0; }
+  #hud-health-fill { background: #3ddc84; } #hud-armor-fill { background: #7fd4ff; }
+  #weapon-slots { display: flex; gap: 4px; margin-top: 8px; }
+  .wslot { flex: 1; text-align: center; background: rgba(255,255,255,.07); border: 1px solid var(--line);
+    border-radius: 6px; padding: 4px 2px; font-size: 10px; line-height: 1.35; }
+  .wslot b { display: block; color: var(--dim); font-size: 10px; }
+  .wslot span { display: block; font-weight: 700; white-space: nowrap; overflow: hidden; }
+  .wslot em { font-style: normal; color: var(--gold); }
+  .wslot.active { border-color: var(--gold); background: rgba(255,209,102,.18); }
+  .wslot.locked { opacity: .45; }
+  #hud-bottom-right { position: absolute; right: 14px; bottom: 14px; text-align: right; }
+  #minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid rgba(255,233,201,.5);
+    box-shadow: 0 0 0 4px rgba(16,10,28,.6); display: block; margin-left: auto; }
+  #hud-speed { font-size: 30px; font-weight: 800; margin-top: 6px; }
+  #hud-car { font-size: 13px; font-weight: 800; } #hud-cond { font-size: 12px; color: var(--dim); }
+  #hud-nitro { width: 190px; margin: 4px 0 0 auto; }
+  #hud-nitro-fill { background: linear-gradient(90deg, #ff7a1a, #ffd166); }
+  #hud-radio { font-size: 12px; color: var(--dim); margin-top: 4px; }
+  #crew-chips { position: absolute; bottom: 118px; left: 14px;
+    display: flex; gap: 8px; }
+  .crew-chip { display: flex; align-items: center; gap: 7px; background: var(--panel);
+    border: 1px solid var(--line); border-left: 4px solid var(--cc, #fff);
+    border-radius: 8px; padding: 6px 10px; font-size: 12px; }
+  .crew-chip b { background: var(--cc, #fff); color: #140f22; border-radius: 4px; padding: 1px 6px; font-size: 12px; }
+  .crew-name { font-weight: 800; } .crew-ab { color: var(--dim); }
+  .crew-chip.cooling { opacity: .55; }
+  #toasts { position: absolute; top: 210px; left: 50%; transform: translateX(-50%); text-align: center; }
+  .toast { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 7px 16px; margin-top: 6px; font-weight: 700; font-size: 14px; display: inline-block; }
+  #dialogue { position: absolute; bottom: 196px; left: 14px;
+    width: 520px; display: flex; gap: 12px; align-items: center; }
+  #dialogue .portrait { width: 54px; height: 54px; border-radius: 50%; flex: none;
+    background: linear-gradient(135deg, #ff7a1a, #ff5c8a); display: flex; align-items: center;
+    justify-content: center; font-size: 26px; font-weight: 800; color: #140f22; }
+  #dialogue .who { font-size: 12px; color: var(--gold); font-weight: 800; letter-spacing: 1px; }
+  #dialogue .line { font-size: 15px; line-height: 1.4; }
+
+  /* ---------- Screens ---------- */
+  .screen { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; }
+  .screen .scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20,8,32,.25), rgba(20,8,32,.72)); }
+  .screen .card { position: relative; max-width: 860px; width: calc(100% - 40px); text-align: center; }
+  .kicker { letter-spacing: 4px; font-size: 13px; font-weight: 800; color: var(--gold); }
+  h1.title { margin: 8px 0 0; font-size: 84px; line-height: .95; font-weight: 900; letter-spacing: 2px;
+    background: linear-gradient(180deg, #fff3d6 10%, #ffb03a 45%, #ff5c8a 75%, #b84dd8 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 4px 30px rgba(255, 122, 26, .35); }
+  h1.title small { display: block; font-size: 34px; letter-spacing: 10px; }
+  .tagline { margin-top: 10px; font-size: 16px; color: var(--ink); }
+  .menu { margin-top: 22px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .menu button, .btn { pointer-events: auto; cursor: pointer; font: inherit; font-weight: 800; letter-spacing: 1px;
+    color: var(--ink); background: rgba(16,10,28,.85); border: 1px solid var(--line); border-radius: 8px;
+    padding: 11px 26px; min-width: 300px; }
+  .menu button:hover, .btn:hover { border-color: var(--gold); color: var(--gold); }
+  .menu button.primary { background: linear-gradient(90deg, #ff7a1a, #ff5c8a); color: #fff; border: none; }
+  .saves { display: flex; gap: 10px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
+  .save-slot { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 14px; font-size: 12.5px; text-align: left; min-width: 200px; line-height: 1.5; }
+  .save-slot b { color: var(--gold); }
+  .hint { margin-top: 16px; color: var(--dim); font-size: 13px; line-height: 1.7; }
+  .big-end { font-size: 72px; font-weight: 900; letter-spacing: 4px; margin: 0; }
+  .big-end.red { color: var(--red); text-shadow: 0 0 30px rgba(255,46,62,.6); }
+  .big-end.gold { color: var(--gold); text-shadow: 0 0 30px rgba(255,209,102,.6); }
+
+  /* ---------- Stats / map screen ---------- */
+  #stats-screen .scrim { background: linear-gradient(180deg, rgba(20,8,32,.62), rgba(20,8,32,.9)); }
+  #stats-screen .card { max-width: 1080px; text-align: left; }
+  #stats-screen h2 { margin: 0 0 10px; font-size: 30px; letter-spacing: 2px; }
+  .stats-grid { display: grid; grid-template-columns: 460px 1fr; gap: 14px; }
+  .stats-col { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  #stats-map { width: 100%; height: 300px; border-radius: 8px; background: #140f22; }
+  .dist-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; border-bottom: 1px dashed rgba(255,233,201,.14); }
+  .dist-row b { letter-spacing: 1px; }
+  .check { font-size: 13.5px; line-height: 1.9; }
+  .check b { color: var(--gold); }
+  .medals { font-size: 20px; letter-spacing: 3px; }
+  .donut-wrap { display: flex; align-items: center; gap: 14px; }
+  .donut { width: 86px; height: 86px; border-radius: 50%; flex: none;
+    background: conic-gradient(var(--gold) 0 var(--pct, 40%), rgba(255,255,255,.12) var(--pct, 40%) 100%);
+    display: flex; align-items: center; justify-content: center; }
+  .donut i { width: 62px; height: 62px; border-radius: 50%; background: #140f22; display: flex;
+    align-items: center; justify-content: center; font-style: normal; font-weight: 800; font-size: 16px; }
+  .career { font-size: 13.5px; line-height: 1.9; columns: 2; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .tabs button { pointer-events: auto; cursor: pointer; font: inherit; font-weight: 800; padding: 8px 18px;
+    border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--ink); }
+  .tabs button.on { background: var(--gold); color: #140f22; border-color: var(--gold); }
+  #briefing .card { max-width: 620px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 26px 30px; text-align: left; }
+  #briefing h2 { margin: 0; font-size: 26px; letter-spacing: 1px; }
+  #briefing p { line-height: 1.6; color: var(--ink); }
+  #briefing .pay { color: var(--gold); font-weight: 800; font-size: 18px; }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Vanta City: Night Runner — an open-world sunset crime game. Drive with W A S D, nitro with Shift, enter cars with E."></canvas>
+<p id="status" role="status" aria-live="polite"></p>
+
+<!-- In-game HUD -->
+<div id="hud" class="hidden">
+  <div id="mission-banner" class="panel" style="display:none">
+    <div id="mb-title">JOB 1/6 · FIRST DROP</div>
+    <div id="mb-row"><span id="mb-stage">STAGE 1/2</span><span id="mb-timer">0:00</span><span id="mb-next">NEXT · —</span><span id="mb-pay">$250</span></div>
+  </div>
+  <div id="hud-stars">☆☆☆☆☆</div>
+  <div id="hud-top-right" class="panel">
+    <div id="hud-cash">$500</div>
+    <div id="hud-rank">STREET ROOKIE</div>
+    <div id="hud-respect">0 / 150</div>
+    <div class="bar"><i id="hud-rank-fill" style="width:0%"></i></div>
+    <div id="hud-district">DOWNTOWN · NEUTRAL 58</div>
+  </div>
+  <div id="dispatch" class="panel">
+    <div id="dispatch-head">VCPD DISPATCH · 0 UNITS · 0★</div>
+    <div id="dispatch-list"><div class="unit more">No units responding — the city is quiet.</div></div>
+  </div>
+  <div id="hud-bottom-left" class="panel">
+    <div class="vital"><span>HEALTH</span><div class="bar"><i id="hud-health-fill" style="width:100%"></i></div></div>
+    <div class="vital"><span>ARMOR</span><div class="bar"><i id="hud-armor-fill" style="width:60%"></i></div></div>
+    <div id="weapon-slots"></div>
+  </div>
+  <div id="hud-bottom-right">
+    <canvas id="minimap" width="190" height="190"></canvas>
+    <div id="hud-speed">0 MPH</div>
+    <div id="hud-car">ON FOOT — RHEA COLE</div>
+    <div id="hud-cond"></div>
+    <div class="bar" id="hud-nitro"><i id="hud-nitro-fill" style="width:100%"></i></div>
+    <div id="hud-radio">VANTA FM 98.6 · Golden Hour Mix</div>
+  </div>
+  <div id="crew-chips"></div>
+  <div id="toasts"></div>
+  <div id="dialogue" class="panel hidden">
+    <div class="portrait">S</div>
+    <div><div class="who" id="dlg-who">SILAS KANE · FIXER</div><div class="line" id="dlg-line"></div></div>
+  </div>
+</div>
+
+<!-- Title screen -->
+<div id="title" class="screen">
+  <div class="scrim"></div>
+  <div class="card">
+    <div class="kicker">AN ORIGINAL OPEN-WORLD CRIME STORY · GOLDEN HOUR</div>
+    <h1 class="title">VANTA CITY<small>NIGHT RUNNER</small></h1>
+    <div class="tagline">Rhea “Wraith” Cole drives for fixer Silas Kane in a coastal city that never sleeps — one sunset, six jobs, the whole precinct on her tail.</div>
+    <div class="menu">
+      <button class="primary" id="btn-continue">CONTINUE — JOB <span id="continue-job">1</span>/6</button>
+      <button id="btn-new">NEW GAME</button>
+      <button id="btn-stats-title">MAP &amp; STATS</button>
+      <button id="btn-how">HOW TO PLAY</button>
+    </div>
+    <div class="saves" id="title-saves"></div>
+    <div class="hint">WASD drive / walk · SHIFT nitro · E steal car · F melee · G shoot · Z / X / C crew · P pause · M mute<br>5 districts · 6 story jobs · taxi fares · 12 neon chips · 3 stunt jumps · wanted 0–5★ · helicopter at 4★</div>
+  </div>
+</div>
+
+<!-- Pause / stats screen -->
+<div id="stats-screen" class="screen hidden">
+  <div class="scrim"></div>
+  <div class="card">
+    <h2>MAP &amp; STATS — VANTA CITY</h2>
+    <div class="tabs">
+      <button id="tab-stats" class="on">STATS</button>
+      <button id="tab-resume">RESUME</button>
+      <button id="tab-title2">QUIT TO TITLE</button>
+    </div>
+    <div class="stats-grid">
+      <div class="stats-col">
+        <canvas id="stats-map" width="460" height="300"></canvas>
+        <div id="stats-districts" style="margin-top:8px"></div>
+      </div>
+      <div class="stats-col">
+        <div class="donut-wrap">
+          <div class="donut" id="stats-donut"><i id="stats-pct">0%</i></div>
+          <div><b>COMPLETE</b><div class="check" id="stats-checklist"></div></div>
+        </div>
+        <div class="medals" id="stats-medals" style="margin-top:8px"></div>
+        <div class="career" id="stats-career" style="margin-top:8px"></div>
+        <div id="stats-saves" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mission briefing -->
+<div id="briefing" class="screen hidden">
+  <div class="scrim"></div>
+  <div class="card">
+    <div class="kicker" id="brf-kicker">JOB 1/6</div>
+    <h2 id="brf-title">FIRST DROP</h2>
+    <p id="brf-text"></p>
+    <div class="pay" id="brf-pay">$250</div>
+    <div class="menu" style="align-items:flex-start">
+      <button class="primary" id="btn-start-job">START JOB</button>
+      <button id="btn-later">NOT YET</button>
+    </div>
+  </div>
+</div>
+
+<!-- Busted / wasted / complete -->
+<div id="gameover" class="screen hidden">
+  <div class="scrim"></div>
+  <div class="card">
+    <p class="big-end red" id="over-title">BUSTED</p>
+    <p class="tagline" id="over-text">The VCPD took you in. Silas is not happy.</p>
+    <div class="menu">
+      <button class="primary" id="btn-retry">TRY AGAIN</button>
+      <button id="btn-over-title">BACK TO TITLE</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
